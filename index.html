@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Androbs Live Builder con Bootstrap</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- InteractJS -->
+  <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #6E3AFF;
+      --secondary: #00C6FB;
+    }
+    
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: #f8f9fa;
+    }
+    
+    #videoContainer {
+      background-color: #000;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .element {
+      position: absolute;
+      z-index: 10;
+      cursor: move;
+    }
+    
+    .selected {
+      box-shadow: 0 0 0 2px var(--primary);
+    }
+    
+    .scrolling {
+      animation: scrollText 10s linear infinite;
+      white-space: nowrap;
+    }
+    
+    @keyframes scrollText {
+      0% { transform: translateX(100%); }
+      100% { transform: translateX(-100%); }
+    }
+	#videoContainer {
+  background-color: rgba(0,0,0,0.1);
+  border: 2px dashed rgba(255,255,255,0.3);
+  position: relative;
+  background-image: 
+    linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+  </style>
+</head>
+<body>
+  <header class="bg-primary text-white py-2">
+    <div class="container">
+      <h1 class="h4 mb-0 text-center">Androbs Live Builder</h1>
+    </div>
+  </header>
+
+  <div class="container-fluid mt-3">
+    <div class="row">
+      <!-- Pannello Controlli -->
+      <div class="col-md-3">
+        <div class="card mb-3">
+          <div class="card-header bg-primary text-white">Elementi</div>
+          <div class="card-body">
+            <button class="btn btn-sm btn-primary mb-2 w-100" onclick="addText()">
+              <i class="bi bi-text-paragraph"></i> Aggiungi Testo
+            </button>
+            <button class="btn btn-sm btn-primary mb-2 w-100" onclick="addTicker()">
+              <i class="bi bi-newspaper"></i> Aggiungi Ticker
+            </button>
+            <button class="btn btn-sm btn-primary mb-2 w-100" onclick="addImageTicker()">
+              <i class="bi bi-image"></i> Aggiungi Ticker Immagine
+            </button>
+            
+            <div class="input-group mb-2">
+              <input type="file" id="logoUpload" class="d-none" accept="image/*">
+              <label for="logoUpload" class="btn btn-sm btn-secondary w-100">
+                <i class="bi bi-upload"></i> Aggiungi Logo
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mb-3">
+          <div class="card-header bg-primary text-white">Stream</div>
+          <div class="card-body">
+            <div class="input-group mb-2">
+              <input type="text" id="ipInput" class="form-control form-control-sm" placeholder="192.168.1.x">
+              <input type="text" id="portInput" class="form-control form-control-sm" placeholder="8082" value="8082">
+            </div>
+            <button class="btn btn-sm btn-success mb-2 w-100" onclick="connectStream()">
+              <i class="bi bi-play-fill"></i> Avvia Stream
+            </button>
+            <div class="btn-group w-100 mb-2">
+              <button class="btn btn-sm btn-outline-secondary" onclick="rotateLeft()">
+                <i class="bi bi-arrow-counterclockwise"></i> Ruota SX
+              </button>
+              <button class="btn btn-sm btn-outline-secondary" onclick="rotateRight()">
+                <i class="bi bi-arrow-clockwise"></i> Ruota DX
+              </button>
+            </div>
+            <button class="btn btn-sm btn-info mb-2 w-100" onclick="toggleVideoSize()">
+              <i class="bi bi-arrows-angle-contract"></i> Toggle Video Size
+            </button>
+			<div class="card mb-3">
+  <div class="card-header bg-primary text-white">Risoluzione Area</div>
+  <div class="card-body">
+    <div class="btn-group w-100 mb-2">
+      <button class="btn btn-sm btn-outline-secondary" onclick="setResolution(1920, 1080)">Full HD (1920x1080)</button>
+      <button class="btn btn-sm btn-outline-secondary" onclick="setResolution(1280, 720)">HD (1280x720)</button>
+      <button class="btn btn-sm btn-outline-secondary" onclick="setResolution(640, 480)">SD (640x480)</button>
+    </div>
+	<button class="btn btn-sm btn-outline-secondary mb-2 w-100" onclick="toggleGrid()">
+  <i class="bi bi-grid"></i> Mostra Griglia
+</button>
+ 
+  </div>
+</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header bg-primary text-white">Esporta/Importa</div>
+          <div class="card-body">
+            <button class="btn btn-sm btn-warning mb-2 w-100" onclick="exportHTML()">
+              <i class="bi bi-file-earmark-code"></i> Esporta HTML
+            </button>
+            <button class="btn btn-sm btn-warning mb-2 w-100" onclick="exportJSON()">
+              <i class="bi bi-file-earmark-text"></i> Esporta JSON
+            </button>
+            <div class="input-group">
+              <input type="file" id="jsonImport" class="d-none" accept="application/json">
+              <label for="jsonImport" class="btn btn-sm btn-secondary w-100">
+                <i class="bi bi-download"></i> Importa JSON
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Canvas -->
+      <div class="col-md-9">
+        <div class="card">
+          <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <span>Anteprima</span>
+            <div class="badge bg-light text-dark" id="statusIndicator">DISCONNESSO</div>
+          </div>
+          <div class="card-body p-0">
+            <div id="canvas" style="height: 70vh; position: relative;">
+              <div id="videoContainer" class="h-100 w-100">
+                <img id="mjpegStream" class="h-100 w-100" style="object-fit: cover; display: block;">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pannello Stile -->
+  <div id="stylePanel" class="card position-fixed" style="top: 10px; right: 10px; width: 250px; display: none;">
+    <div class="card-header bg-primary text-white">Proprietà</div>
+    <div class="card-body">
+      <div class="mb-2">
+        <label class="form-label">Font</label>
+        <select id="fontSelect" class="form-select form-select-sm"></select>
+      </div>
+      <div class="mb-2">
+        <label class="form-label">Colore</label>
+        <input type="color" id="colorPicker" class="form-control form-control-color">
+      </div>
+      <div class="mb-2">
+        <label class="form-label">Dimensione (px)</label>
+        <input type="number" id="fontSizeInput" class="form-control form-control-sm" min="10" max="200" value="16">
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast position-fixed start-50 translate-middle-x" style="bottom: 20px;">
+    <div class="toast-body bg-primary text-white"></div>
+  </div>
+
+  <!-- Bootstrap JS + Popper -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <script>
+        const canvas = document.getElementById('canvas');
+    const mjpegStream = document.getElementById('mjpegStream');
+    const fontSelect = document.getElementById('fontSelect');
+    const colorPicker = document.getElementById('colorPicker');
+    const fontSizeInput = document.getElementById('fontSizeInput');
+    const stylePanel = document.getElementById('stylePanel');
+    const toast = document.getElementById('toast');
+    const ipInput = document.getElementById('ipInput');
+    const portInput = document.getElementById('portInput');
+    const statusIndicator = document.getElementById('statusIndicator');
+    const connTime = document.getElementById('connTime');
+   
+    const videoContainer = document.getElementById('videoContainer');
+    
+    let fullScreen = true;
+    let selectedEl = null;
+    let currentRotation = 0;
+    let timer = null;
+    let startTime = 0;
+    let mjpegUrl = '';
+    let mjpegActive = false;
+
+    const fonts = ["DM Sans", "Inter", "Space Mono", "Space Grotesk", "Work Sans", "Syne", "Libre Franklin", "Cormorant", "Fira Sans", "Eczar", "Alegreya Sans", "Alegreya", "Source Sans Pro", "Source Serif Pro", "Roboto", "Fraunces", "Inknut Antiqua", "BioRhyme", "Poppins", "Archivo Narrow", "Libre Baskerville", "Playfair Display", "Karla", "Lora", "Proza Libre", "Spectral", "IBM Plex Sans", "Manrope", "Montserrat", "Lato", "PT Sans", "PT Serif", "Cardo", "Chivo", "Neuton", "Rubik", "Open Sans", "Inconsolata", "Raleway", "Merriweather", "Anton", "Outfit", "Radley", "Arimo", "Josefin Sans", "Tangerine", "Hind", "Sacramento", "Tinos", "Noto Sans"];
+
+   function connectStream() {
+  const ip = ipInput.value.trim();
+  const port = portInput.value.trim();
+  
+  if (!ip || !port) {
+    showToast('Inserisci IP e porta', 2000);
+    return;
+  }
+
+  // Aggiungi protocollo se mancante
+  let url = ip.startsWith('http') ? ip : `http://${ip}`;
+  url = port ? `${url}:${port}/` : `${url}/`;
+
+ 
+  updateStatus('CONNESSIONE...', 'bg-warning');
+  
+  // Reset src prima di riconnettere
+  mjpegStream.src = '';
+  mjpegStream.onerror = null;
+  mjpegStream.onload = null;
+
+  setTimeout(() => {
+    mjpegStream.src = url;
+    
+    mjpegStream.onload = () => {
+      updateStatus('CONNESSO', 'bg-success');
+      loadingIndicator.style.display = 'none';
+      mjpegActive = true;
+    };
+    
+    mjpegStream.onerror = () => {
+      stopStream('ERRORE CONNESSIONE');
+      showToast('Errore: impossibile connettere lo stream', 2000);
+    };
+  }, 100);
+}
+
+    window.onload = () => {
+      fonts.forEach(font => {
+        const option = document.createElement('option');
+        option.value = option.textContent = font;
+        fontSelect.appendChild(option);
+      });
+
+      const ipFromHost = window.location.hostname;
+      if(ipFromHost && ipFromHost !== 'localhost' && ipFromHost !== '127.0.0.1') {
+        ipInput.value = ipFromHost;
+        connectStream();
+      }
+    };
+
+    function updateStatus(text, className) {
+      statusIndicator.textContent = text;
+      statusIndicator.className = `status-value ${className}`;
+    }
+
+    function resetTimer() {
+      clearInterval(timer);
+      connTime.textContent = '00:00';
+    }
+
+    function startTimer() {
+      startTime = Date.now();
+      timer = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+        const s = String(elapsed % 60).padStart(2, '0');
+        connTime.textContent = `${m}:${s}`;
+      }, 1000);
+    }
+
+    function startMJPEGStream(url) {
+      const refreshImage = () => {
+        if (!mjpegActive) return;
+        
+        const timestamp = new Date().getTime();
+        mjpegStream.src = `${url}?${timestamp}`;
+        
+        setTimeout(refreshImage, 100);
+      };
+      
+      mjpegActive = true;
+      refreshImage();
+    }
+
+    function stopStream(reason) {
+      mjpegActive = false;
+      mjpegStream.src = '';
+      loadingIndicator.style.display = 'none';
+      updateStatus(reason || 'DISCONNESSO', 'disconnected');
+      resetTimer();
+    }
+
+    function rotateLeft() {
+      currentRotation = (currentRotation - 90 + 360) % 360;
+      mjpegStream.style.transform = `rotate(${currentRotation}deg)`;
+    }
+
+    function rotateRight() {
+      currentRotation = (currentRotation + 90) % 360;
+      mjpegStream.style.transform = `rotate(${currentRotation}deg)`;
+    }
+
+    function showToast(message, duration = 3000) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, duration);
+    }
+
+    function createElement(type, content = '', styles = {}) {
+      const el = document.createElement(type);
+      el.classList.add('element', 'resizable');
+      if (type !== 'img') {
+        el.setAttribute('contenteditable', 'true');
+      }
+      el.innerHTML = content;
+      Object.assign(el.style, styles);
+      canvas.appendChild(el);
+      makeInteractable(el);
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectElement(el);
+      });
+      el.ondblclick = () => { if (confirm("Rimuovere questo elemento?")) el.remove(); };
+      return el;
+    }
+
+    function selectElement(el) {
+      if (selectedEl) selectedEl.classList.remove('selected');
+      selectedEl = el;
+      el.classList.add('selected');
+      stylePanel.style.display = 'block';
+      
+      document.addEventListener('click', (e) => {
+        const isStylePanel = e.target.closest('#stylePanel');
+        const isElement = e.target.closest('.element');
+        
+        if (!isStylePanel && !isElement) {
+          stylePanel.style.display = 'none';
+          if (selectedEl) {
+            selectedEl.classList.remove('selected');
+            selectedEl = null;
+          }
+        }
+      });
+      
+      if (el.tagName !== 'IMG') {
+        fontSelect.disabled = false;
+        colorPicker.disabled = false;
+        fontSizeInput.disabled = false;
+        fontSelect.value = getComputedStyle(el).fontFamily.replace(/['"]/g, '').split(',')[0];
+        colorPicker.value = rgbToHex(getComputedStyle(el).color);
+        fontSizeInput.value = parseInt(getComputedStyle(el).fontSize);
+      } else {
+        fontSelect.disabled = true;
+        colorPicker.disabled = true;
+        fontSizeInput.disabled = true;
+      }
+    }
+
+    function addText() {
+      createElement('div', 'Nuovo Testo', { 
+        top: '50px', 
+        left: '50px',
+        fontFamily: 'DM Sans',
+        fontSize: '16px',
+        color: 'white'
+      });
+    }
+
+    function addTicker() {
+      const ticker = createElement('div', 'Ticker modificabile', { 
+        bottom: '10px', 
+        left: '10px',
+        width: '200px',
+        fontFamily: 'DM Sans',
+        fontSize: '16px',
+        color: 'white'
+      });
+      
+      ticker.ondblclick = (e) => {
+        e.stopPropagation();
+        if (confirm("Attivare scorrimento ticker?")) {
+          ticker.classList.toggle('scrolling');
+        } else if (confirm("Rimuovere il ticker?")) {
+          ticker.remove();
+        }
+      };
+    }
+
+    function addImageTicker() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const img = createElement('img', '', {
+            bottom: '10px',
+            left: '10px',
+            width: '200px'
+			
+          });
+          img.src = evt.target.result;
+          
+          img.ondblclick = (e) => {
+            e.stopPropagation();
+            if (confirm("Attivare scorrimento immagine?")) {
+              img.classList.toggle('scrolling-image');
+            } else if (confirm("Rimuovere l'immagine?")) {
+              img.remove();
+            }
+          };
+        };
+        reader.readAsDataURL(file);
+      };
+      input.click();
+    }
+
+    function makeInteractable(target) {
+      interact(target).draggable({
+        listeners: {
+          move(event) {
+            const { target } = event;
+            const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
+            const y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
+            target.style.transform = `translate(${x}px, ${y}px)`;
+            target.setAttribute('data-x', x);
+            target.setAttribute('data-y', y);
+          }
+        }
+      }).resizable({
+        edges: { left: true, right: true, bottom: true, top: true },
+      }).on('resizemove', function (event) {
+        const target = event.target;
+        let x = (parseFloat(target.getAttribute('data-x')) || 0);
+        let y = (parseFloat(target.getAttribute('data-y')) || 0);
+        target.style.width = event.rect.width + 'px';
+        target.style.height = event.rect.height + 'px';
+        x += event.deltaRect.left;
+        y += event.deltaRect.top;
+        target.style.transform = `translate(${x}px, ${y}px)`;
+        target.setAttribute('data-x', x);
+        target.setAttribute('data-y', y);
+      });
+    }
+
+  document.getElementById('logoUpload').addEventListener('change', function (e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  // Lista dei MIME type supportati
+  const supportedFormats = [
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'image/svg+xml'
+  ];
+
+  // Verifica formato file
+  if (!supportedFormats.includes(file.type)) {
+    showToast(`Formato non supportato. Usa: ${supportedFormats.join(', ')}`, 3000);
+    return;
+  }
+
+  // Controllo dimensioni file (max 5MB)
+  const maxSize = 5 * 1024 * 1024; // 5MB
+  if (file.size > maxSize) {
+    showToast('L\'immagine è troppo grande (max 5MB)', 3000);
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onloadstart = function() {
+    showToast('Conversione in corso...', 2000);
+  };
+
+  reader.onload = function(evt) {
+    try {
+      // Crea l'elemento immagine per verificare la validità
+      const testImg = new Image();
+      testImg.onload = function() {
+        // Se arriva qui, l'immagine è valida
+        const img = createElement('img', '', {
+          width: '100px',
+          top: '20px',
+          left: '20px',
+          objectFit: 'contain',
+          backgroundColor: 'transparent'
+		
+        });
+		
+        // Usa direttamente il Base64 dal FileReader
+        img.src = evt.target.result;
+        img.setAttribute('data-logo', 'true');
+        img.setAttribute('data-original-name', file.name);
+        
+        showToast('Logo caricato con successo!', 2000);
+      };
+      
+      testImg.onerror = function() {
+        showToast('Immagine corrotta o non valida', 3000);
+      };
+      
+      testImg.src = evt.target.result;
+    } catch (error) {
+      showToast('Errore nel processamento dell\'immagine', 3000);
+      console.error('Image processing error:', error);
+    }
+  };
+
+  reader.onerror = function() {
+    showToast('Errore nella lettura del file', 3000);
+  };
+
+  reader.onabort = function() {
+    showToast('Caricamento annullato', 2000);
+  };
+
+  // Leggi il file come Data URL (Base64)
+  reader.readAsDataURL(file);
+  
+  // Resetta l'input per permettere di ricaricare lo stesso file
+  e.target.value = '';
+});
+
+    function toggleVideoSize() {
+      if (fullScreen) {
+        videoContainer.style.width = '60%';
+        videoContainer.style.height = '60%';
+        videoContainer.style.left = '20%';
+        videoContainer.style.top = '20%';
+        videoContainer.style.position = 'absolute';
+      } else {
+        videoContainer.style.width = '100%';
+        videoContainer.style.height = '100%';
+        videoContainer.style.left = '0';
+        videoContainer.style.top = '0';
+      }
+      fullScreen = !fullScreen;
+    }
+
+    function rgbToHex(rgb) {
+      const result = rgb.match(/\d+/g).map(x => parseInt(x).toString(16).padStart(2, '0'));
+      return `#${result.join('')}`;
+    }
+
+    function getUsedFonts() {
+      const usedFonts = new Set();
+      Array.from(canvas.querySelectorAll('.element')).forEach(el => {
+        if (el.tagName !== 'IMG') {
+          const fontFamily = getComputedStyle(el).fontFamily.replace(/['"]/g, '').split(',')[0];
+          if (fonts.includes(fontFamily)) {
+            usedFonts.add(fontFamily);
+          }
+        }
+      });
+      return Array.from(usedFonts);
+    }
+
+    function exportHTML() {
+      const elements = Array.from(canvas.querySelectorAll('.element')).map(el => {
+        const rect = el.getBoundingClientRect();
+        const canvasRect = canvas.getBoundingClientRect();
+        
+        const top = rect.top - canvasRect.top;
+        const left = rect.left - canvasRect.left;
+        
+        const style = window.getComputedStyle(el);
+        const transform = el.style.transform || 'none';
+        
+        let imageContent = null;
+        if (el.tagName === 'IMG') {
+          imageContent = el.src;
+        }
+
+        
+        return {
+          tagName: el.tagName.toLowerCase(),
+          isImage: el.tagName === 'IMG',
+          imageContent: imageContent,
+          content: el.tagName === 'IMG' ? '' : el.innerHTML,
+          styles: {
+            top: `${top}px`,
+            left: `${left}px`,
+            width: el.style.width || `${rect.width}px`,
+            height: el.style.height || `${rect.height}px`,
+            transform: transform,
+            fontFamily: style.fontFamily,
+            fontSize: style.fontSize,
+            color: style.color,
+            position: 'absolute',
+            zIndex: style.zIndex,
+            dataX: el.getAttribute('data-x') || '0',
+            dataY: el.getAttribute('data-y') || '0'
+          },
+          isTicker: el.classList.contains('scrolling') || el.classList.contains('scrolling-image'),
+          isLogo: el.hasAttribute('data-logo')
+        };
+      });
+	  
+const usedFonts = getUsedFonts();
+        const fontLink = usedFonts.length > 0 
+          ? `<link href="https://fonts.googleapis.com/css2?family=${usedFonts.join('|')}&display=swap" rel="stylesheet">`
+          : '';
+      const ip = ipInput.value.trim();
+      const port = portInput.value.trim();
+      const streamUrl = ip && port ? `http://${ip}:${port}/` : '';
+
+      const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Esportazione Androbs Builder</title>
+  ${fontLink}
+  <style>
+    body { margin: 0; overflow: hidden; }
+    #exportedCanvas { 
+      position: relative; 
+      width: 100vw; 
+      height: 100vh; 
+      overflow: hidden;
+      background: black;
+    }
+    #exportedVideoContainer {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+    #exportedMjpegStream {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      position: absolute;
+      z-index: 0;
+      transform: rotate(${currentRotation}deg);
+    }
+    .exported-element {
+      position: absolute;
+      padding: 5px;
+      resize: both;
+      overflow: auto;
+      box-sizing: border-box;
+    }
+     .exported-logo {
+      background-color: transparent !important;
+      border: none !important;
+      object-fit: contain !important;
+    }
+    .scrolling {
+      animation: scrollText 10s linear infinite;
+      white-space: nowrap;
+    }
+    .scrolling-image {
+      animation: scrollImage 10s linear infinite;
+    }
+    @keyframes scrollText {
+      0% { transform: translateX(100%); }
+      100% { transform: translateX(-100%); }
+    }
+    @keyframes scrollImage {
+      0% { transform: translateX(100%); }
+      100% { transform: translateX(-100%); }
+    }
+  </style>
+</head>
+<body>
+  <div id="exportedCanvas">
+    <div id="exportedVideoContainer">
+      <img id="exportedMjpegStream" style="display: block;-webkit-user-select: none;margin: auto;background-color: hsl(0, 0%, 25%);" src="${streamUrl}">
+    </div>
+    
+    ${elements.map(el => {
+      if (el.isImage) {
+        return `
+        <img src="${el.imageContent}" class="exported-element ${el.isTicker ? 'scrolling-image' : ''} ${el.isLogo ? 'exported-logo' : ''}" 
+          style="
+            top: ${el.styles.top};
+            left: ${el.styles.left};
+            width: ${el.styles.width};
+            height: ${el.styles.height};
+            transform: ${el.styles.transform};
+            position: ${el.styles.position};
+            z-index: ${el.styles.zIndex};
+          "
+          ${el.isLogo ? 'data-logo="true"' : ''}
+        />`;
+      } else {
+        return `
+        <${el.tagName} class="exported-element ${el.isTicker ? 'scrolling' : ''}" 
+          style="
+            top: ${el.styles.top};
+            left: ${el.styles.left};
+            width: ${el.styles.width};
+            height: ${el.styles.height};
+            transform: ${el.styles.transform};
+            font-family: ${el.styles.fontFamily};
+            font-size: ${el.styles.fontSize};
+            color: ${el.styles.color};
+            position: ${el.styles.position};
+            z-index: ${el.styles.zIndex};
+          "
+          data-x="${el.styles.dataX}"
+          data-y="${el.styles.dataY}"
+        >
+          ${el.content}
+        </${el.tagName}>`;
+      }
+    }).join('')}
+  </div>
+
+  <script>
+    const mjpegStream = document.getElementById('exportedMjpegStream');
+    let mjpegActive = true;
+    
+    function refreshMJPEG() {
+      if (!mjpegActive || !mjpegStream.src) return;
+      
+      const timestamp = new Date().getTime();
+      mjpegStream.src = \`${streamUrl}?\${timestamp}\`;
+      
+      setTimeout(refreshMJPEG, 100);
+    }
+    
+    if (mjpegStream.src) {
+      mjpegStream.onload = () => setTimeout(refreshMJPEG, 100);
+      mjpegStream.onerror = () => mjpegActive = false;
+    }
+
+</body>
+</html>`;
+
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'androbs-export.html';
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      showToast('HTML esportato con successo!');
+    }
+
+    function exportJSON() {
+      const elements = Array.from(canvas.querySelectorAll('.element')).map(el => {
+        const rect = el.getBoundingClientRect();
+        const canvasRect = canvas.getBoundingClientRect();
+        
+        const top = rect.top - canvasRect.top;
+        const left = rect.left - canvasRect.left;
+        
+        const style = window.getComputedStyle(el);
+        const transform = el.style.transform || 'none';
+        
+        return {
+          type: el.tagName.toLowerCase(),
+          content: el.tagName === 'IMG' ? '' : el.innerHTML,
+          isImage: el.tagName === 'IMG',
+          imageSrc: el.tagName === 'IMG' ? el.src : null,
+          styles: {
+            top: `${top}px`,
+            left: `${left}px`,
+            width: el.style.width || `${rect.width}px`,
+            height: el.style.height || `${rect.height}px`,
+            transform: transform,
+            fontFamily: style.fontFamily,
+            fontSize: style.fontSize,
+            color: style.color,
+            position: 'absolute',
+            zIndex: style.zIndex,
+            dataX: el.getAttribute('data-x') || '0',
+            dataY: el.getAttribute('data-y') || '0'
+          },
+          isTicker: el.classList.contains('scrolling') || el.classList.contains('scrolling-image')
+        };
+      });
+
+      const ip = ipInput.value.trim();
+      const port = portInput.value.trim();
+      const streamUrl = ip && port ? `http://${ip}:${port}/` : '';
+
+      const data = {
+        streamUrl: streamUrl,
+        elements: elements,
+        fullScreen: fullScreen,
+        rotation: currentRotation
+      };
+
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'androbs-export.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      showToast('JSON esportato con successo!');
+    }
+
+    document.getElementById('jsonImport').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const data = JSON.parse(evt.target.result);
+          
+          document.querySelectorAll('.element').forEach(el => el.remove());
+          
+          if(data.streamUrl) {
+            const url = new URL(data.streamUrl);
+            ipInput.value = url.hostname;
+            portInput.value = url.port || '8082';
+            mjpegStream.src = data.streamUrl;
+            updateStatus('CONNESSO', 'connected');
+          }
+          
+          currentRotation = data.rotation || 0;
+          mjpegStream.style.transform = `rotate(${currentRotation}deg)`;
+          
+          fullScreen = data.fullScreen;
+          toggleVideoSize();
+          
+          data.elements.forEach(elData => {
+            let el;
+            if (elData.isImage) {
+              el = createElement('img', '', elData.styles);
+              el.src = elData.imageSrc;
+              if (elData.isTicker) {
+                el.classList.add('scrolling-image');
+              }
+            } else {
+              el = createElement(elData.type, elData.content, elData.styles);
+              if (elData.isTicker) {
+                el.classList.add('scrolling');
+              }
+            }
+            
+            if (elData.styles.transform) {
+              el.style.transform = elData.styles.transform;
+            }
+            if (elData.styles.dataX) {
+              el.setAttribute('data-x', elData.styles.dataX);
+            }
+            if (elData.styles.dataY) {
+              el.setAttribute('data-y', elData.styles.dataY);
+            }
+          });
+          
+          showToast('Progetto importato con successo!');
+        } catch (err) {
+          showToast('Errore durante l\'importazione del file JSON');
+          console.error(err);
+        }
+      };
+      reader.readAsText(file);
+    });
+    
+    // Solo modifiche minime per adattare a Bootstrap:
+    function showToast(message, duration = 3000) {
+      const toastEl = document.getElementById('toast');
+      const toastBody = toastEl.querySelector('.toast-body');
+      toastBody.textContent = message;
+      
+      const toast = new bootstrap.Toast(toastEl);
+      toast.show();
+      
+      setTimeout(() => {
+        toast.hide();
+      }, duration);
+    }
+	
+	
+	let canvasWidth = 1920;
+let canvasHeight = 1080;
+let scaleFactor = 1;
+
+function setResolution(width, height) {
+  canvasWidth = width;
+  canvasHeight = height;
+  updateCanvasSize();
+  showToast(`Area impostata a ${width}x${height}`);
+}
+
+
+
+function updateCanvasSize() {
+  const canvas = document.getElementById('canvas');
+  const videoContainer = document.getElementById('videoContainer');
+  
+  // Calcola il rapporto di scala mantenendo le proporzioni
+  scaleFactor = Math.min(
+    canvas.offsetWidth / canvasWidth,
+    canvas.offsetHeight / canvasHeight
+  );
+  
+  videoContainer.style.width = `${canvasWidth * scaleFactor}px`;
+  videoContainer.style.height = `${canvasHeight * scaleFactor}px`;
+  videoContainer.style.left = `${(canvas.offsetWidth - (canvasWidth * scaleFactor)) / 2}px`;
+  
+  // Aggiorna tutti gli elementi
+  document.querySelectorAll('.element').forEach(el => {
+    const x = parseFloat(el.style.left || 0) * scaleFactor;
+    const y = parseFloat(el.style.top || 0) * scaleFactor;
+    el.style.transform = `translate(${x}px, ${y}px)`;
+    el.setAttribute('data-x', x);
+    el.setAttribute('data-y', y);
+  });
+}
+
+function adjustElementPosition(element) {
+  const x = parseFloat(element.getAttribute('data-x') || 0;
+  const y = parseFloat(element.getAttribute('data-y') || 0;
+  
+  // Converti le coordinate originali al nuovo fattore di scala
+  element.style.left = `${x / scaleFactor}px`;
+  element.style.top = `${y / scaleFactor}px`;
+  element.style.transform = `translate(${x}px, ${y}px)`;
+}
+function resizeElementForExport(element, targetWidth, targetHeight) {
+  const aspectRatio = element.naturalWidth / element.naturalHeight;
+  
+  if (targetWidth / targetHeight > aspectRatio) {
+    return {
+      width: targetHeight * aspectRatio,
+      height: targetHeight
+    };
+  } else {
+    return {
+      width: targetWidth,
+      height: targetWidth / aspectRatio
+    };
+  }
+}
+
+// Chiamata iniziale e al ridimensionamento finestra
+window.addEventListener('resize', updateCanvasSize);
+setResolution(1920, 1080);
+
+function toggleGrid() {
+  const grid = document.getElementById('gridOverlay');
+  if(!grid) {
+    const grid = document.createElement('div');
+    grid.id = 'gridOverlay';
+    grid.style.position = 'absolute';
+    grid.style.top = '0';
+    grid.style.left = '0';
+    grid.style.width = '100%';
+    grid.style.height = '100%';
+    grid.style.backgroundImage = `
+      linear-gradient(rgba(255,0,0,0.3) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,0,0,0.3) 1px, transparent 1px)`;
+    grid.style.backgroundSize = '10% 10%';
+    grid.style.pointerEvents = 'none';
+    videoContainer.appendChild(grid);
+  } else {
+    grid.remove();
+  }
+}
+  </script>
+</body>
+</html>
